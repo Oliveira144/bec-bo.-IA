@@ -118,6 +118,7 @@ def atualizar_contadores_horarios(player_dado1, player_dado2, banker_dado1, bank
     else:
         st.session_state.rodadas_desde_ultimo_empate += 1
         # Diminui empates recentes se não houver um empate na rodada atual
+        # Isso ajuda a monitorar a 'densidade' de empates
         st.session_state.empates_recentes = max(0, st.session_state.empates_recentes - 1)
 
     # Contar dado '1' consecutivo (em qualquer dado)
@@ -169,11 +170,12 @@ if add_round_button:
     atualizar_contadores_horarios(player_dado1, player_dado2, banker_dado1, banker_dado2, winner)
 
     st.success(f"Rodada {len(st.session_state.historico)} adicionada! Vencedor: **{winner}**")
-    st.experimental_rerun() # Re-executa para atualizar a sugestão e painéis imediatamente
+    # A re-execução automática do Streamlit geralmente cuida da atualização da interface
+    # após a modificação de st.session_state. Nenhuma chamada explícita a rerun é necessária aqui.
 
 st.markdown("---")
 
-# --- Análise de Horários Críticos e Bons ---
+# --- Análise de Momentos da Mesa ---
 st.header("⏰ Análise de Momentos da Mesa")
 
 horario_ruim = False
@@ -181,10 +183,9 @@ horario_bom = False
 
 # Lógica para "Horários Ruins"
 if len(st.session_state.historico) > 0: # Só analisa se houver histórico
-    # Critério 1: Muitos empates no início (ex: 3 empates nas primeiras 10 rodadas)
-    # Para ser mais preciso, você pode verificar os últimos N empates nas últimas M rodadas.
-    # Por enquanto, este é um indicador simples:
-    if st.session_state.empates_recentes >= 3 and len(st.session_state.historico) < 15: # Ajuste o 15 conforme necessário
+    # Critério 1: Muitos empates no início (ex: 3 empates nas primeiras 10-15 rodadas)
+    # Ajuste '15' conforme o período de análise desejado para "início".
+    if st.session_state.empates_recentes >= 3 and len(st.session_state.historico) <= 15:
         st.warning("⚠️ **Cuidado:** Mesa com muitos empates no início. Sugerimos cautela.")
         horario_ruim = True
     
@@ -210,7 +211,6 @@ if len(st.session_state.historico) > 0: # Só analisa se houver histórico
         horario_bom = True
     
     # Critério 2: Padrão Ouro se formando (seria detectado na função 'detectar_padroes' e retornado com alta confiança)
-    # Exemplo: se detectar_padroes retornasse um padrão com nome "🔒 Padrão Ouro" e confiança > 90
     _, _, confianca_sugestao, _ = analisar_sugestao(st.session_state.historico)
     if confianca_sugestao > 90: # Assumindo que padrões de alta confiança indicam "horário bom"
         st.success("✨ **Momento Promissor:** Padrão de alta confiança detectado!")
@@ -263,17 +263,17 @@ elif entrada_sugerida:
                 st.session_state.g1_active = False # Desativa G1 se acertou
                 st.session_state.last_suggested_entry = None # Reseta a sugestão G1
                 st.success("🎉 Parabéns! GREEN!")
-                st.experimental_rerun()
+                # O Streamlit vai re-executar automaticamente após a mudança no session_state
         with col_feedback2:
             if st.button("❌ RED (Errou)", use_container_width=True):
                 st.session_state.red_count += 1
                 st.session_state.g1_active = True # Ativa G1 se errou
                 st.error("😥 Que pena! RED. G1 ativado para a próxima entrada.")
-                st.experimental_rerun()
+                # O Streamlit vai re-executar automaticamente após a mudança no session_state
         with col_feedback3:
             if st.button("🟡 EMPATE (Na Aposta)", use_container_width=True): # O empate na aposta não é RED nem GREEN
                 st.info("Rodada foi um empate. Contadores de GREEN/RED e G1 não alterados para esta aposta.")
-                st.experimental_rerun()
+                # O Streamlit vai re-executar automaticamente após a mudança no session_state
 else:
     st.info("Aguardando mais dados ou padrões de alta confiança para sugerir uma entrada. Continue adicionando rodadas!")
 
@@ -317,4 +317,5 @@ if st.button("🔄 Limpar Histórico e Resetar Tudo", help="Isso apagará todas 
     st.session_state.rodadas_desde_ultimo_empate = 0
     st.session_state.empates_recentes = 0
     st.session_state.count_dado_1_consecutivo = 0
-    st.experimental_rerun()
+    # O Streamlit vai re-executar automaticamente após a mudança no session_state
+
