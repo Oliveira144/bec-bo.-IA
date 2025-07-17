@@ -13,27 +13,28 @@ st.set_page_config(
 )
 
 # --- Inicialização do Estado da Sessão ---
-# Usamos st.session_state para manter o estado do app entre as interações
+# Usamos st.session_state para manter o estado do app entre as interações.
+# Isso garante que as variáveis não sejam perdidas a cada interação do usuário.
 if 'historico' not in st.session_state:
-    st.session_state.historico = []
+    st.session_state.historico = [] # Lista de dicionários com os resultados de cada rodada
 if 'green_count' not in st.session_state:
-    st.session_state.green_count = 0
+    st.session_state.green_count = 0 # Contador de acertos (GREEN)
 if 'red_count' not in st.session_state:
-    st.session_state.red_count = 0
+    st.session_state.red_count = 0 # Contador de erros (RED)
 if 'g1_active' not in st.session_state:
-    st.session_state.g1_active = False
+    st.session_state.g1_active = False # Flag para ativar o modo G1 (Martingale simplificado)
 if 'last_suggested_entry' not in st.session_state:
-    st.session_state.last_suggested_entry = None
+    st.session_state.last_suggested_entry = None # Armazena a última sugestão para o modo G1
 if 'rodadas_desde_ultimo_empate' not in st.session_state:
-    st.session_state.rodadas_desde_ultimo_empate = 0
+    st.session_state.rodadas_desde_ultimo_empate = 0 # Contagem para o padrão de "empate sumindo"
 if 'empates_recentes' not in st.session_state:
-    st.session_state.empates_recentes = 0 # Para controle de horários ruins (ex: 3 empates em 10 rodadas)
+    st.session_state.empates_recentes = 0 # Contagem para o padrão de "muitos empates iniciais"
 if 'count_dado_1_consecutivo' not in st.session_state:
-    st.session_state.count_dado_1_consecutivo = 0
+    st.session_state.count_dado_1_consecutivo = 0 # Contagem para o padrão de "dado 1 repetido"
 
 # --- Funções Auxiliares ---
 def get_winner(player_sum, banker_sum):
-    """Determina o vencedor da rodada."""
+    """Determina o vencedor da rodada com base nas somas dos dados."""
     if player_sum == banker_sum:
         return 'Empate'
     elif player_sum > banker_sum:
@@ -43,48 +44,49 @@ def get_winner(player_sum, banker_sum):
 
 def detectar_padroes(historico_completo):
     """
-    Função placeholder para detecção de padrões.
-    Esta função seria expandida para conter a lógica dos 30 padrões.
-    Por enquanto, retorna um padrão genérico e uma sugestão.
-
-    CORREÇÃO: Adicionado tratamento para histórico vazio/poucos elementos
-    e correção da chave 'Vencedor'.
+    Função para detecção de padrões.
+    Esta função deve ser expandida para conter a lógica dos seus 30 padrões.
+    Retorna o nome do padrão, a sugestão (Player/Banker) e um nível de confiança.
     """
-    # Se o histórico estiver vazio, não há padrões para detectar
-    if not historico_completo:
-        return "Nenhum Padrão Detectado", None, 0 # Nome do padrão, Sugestão (Player/Banker), Confiança
+    # Se o histórico for muito pequeno, não há padrões complexos a serem detectados
+    if not historico_completo or len(historico_completo) < 2:
+        return "Nenhum Padrão Forte", None, 0
 
-    # Sempre podemos pegar o último resultado se o histórico não estiver vazio
-    ultimo_resultado = historico_completo[-1]['Vencedor'] # USANDO 'Vencedor' com 'V' maiúsculo
+    ultimo_resultado = historico_completo[-1]['Vencedor']
+    
+    # --- Exemplos de Padrões (você deve expandir esta seção) ---
 
-    # Padrão 1: Alternância Simples (Player/Banker intercalado)
+    # Padrão 1: Alternância Simples (Ex: Player -> Banker -> Player)
     if len(historico_completo) >= 2:
-        segundo_ultimo_resultado = historico_completo[-2]['Vencedor'] # USANDO 'Vencedor'
+        segundo_ultimo_resultado = historico_completo[-2]['Vencedor']
         if ultimo_resultado != 'Empate' and segundo_ultimo_resultado != 'Empate' and \
            ultimo_resultado != segundo_ultimo_resultado:
             sugestao = 'Banker' if ultimo_resultado == 'Player' else 'Player'
-            return "1. Alternância Simples", sugestao, 70 # 70% de confiança para este exemplo
+            return "1. Alternância Simples (P-B-P)", sugestao, 70 # Exemplo de confiança
 
-    # Padrão 2: Sequência de 2
+    # Padrão 2: Sequência de 2 (Ex: Player -> Player)
     if len(historico_completo) >= 2 and ultimo_resultado != 'Empate':
-        if historico_completo[-1]['Vencedor'] == historico_completo[-2]['Vencedor']: # USANDO 'Vencedor'
-            sugestao = ultimo_resultado
-            return "2. Sequência de 2", sugestao, 75 # 75% de confiança
-    
-    # Padrão 3: Sequência de 3
+        if historico_completo[-1]['Vencedor'] == historico_completo[-2]['Vencedor']:
+            sugestao = ultimo_resultado # Sugere o mesmo que veio antes
+            return "2. Sequência de 2 (P-P)", sugestao, 75
+
+    # Padrão 3: Sequência de 3 (Ex: Player -> Player -> Player) e sugestão de reversão
     if len(historico_completo) >= 3 and ultimo_resultado != 'Empate':
         if (historico_completo[-1]['Vencedor'] == historico_completo[-2]['Vencedor'] and
             historico_completo[-2]['Vencedor'] == historico_completo[-3]['Vencedor']):
-            sugestao = 'Banker' if ultimo_resultado == 'Player' else 'Player' # Reversão
-            return "3. Sequência de 3", sugestao, 80 # 80% de confiança
+            sugestao = 'Banker' if ultimo_resultado == 'Player' else 'Player' # Sugere o oposto
+            return "3. Sequência de 3 (P-P-P) - Reversão", sugestao, 80
 
-    # Padrão Ouro (placeholder - você implementaria a lógica complexa aqui)
-    # Por exemplo, se uma sequência específica de 5 rodadas se repetisse
-    # if detectar_padrao_ouro_real(historico_completo): # Esta função seria sua lógica avançada
-    #    return "🔒 Padrão Ouro", "Player", 95 # Altíssima confiança
+    # Adicione aqui seus outros 27 padrões...
+    # Exemplo de como você poderia adicionar mais um:
+    # if len(historico_completo) >= 4 and ultimo_resultado == 'Player' and \
+    #    historico_completo[-2]['Vencedor'] == 'Banker' and \
+    #    historico_completo[-3]['Vencedor'] == 'Player' and \
+    #    historico_completo[-4]['Vencedor'] == 'Banker':
+    #    return "4. Padrão 'PB PB'", 'Player', 85
 
-    # Se nenhum padrão forte for detectado com alta confiança
-    return "Nenhum Padrão Forte", None, 0
+    # --- Se nenhum padrão forte for detectado ---
+    return "Aguardando Padrão Forte", None, 0
 
 def analisar_sugestao(historico):
     """
@@ -97,25 +99,26 @@ def analisar_sugestao(historico):
         return "Modo G1 Ativo", st.session_state.last_suggested_entry, 100, True
 
     # Pega o nome do padrão, sugestão e confiança da função de detecção
-    nome_padrao, sugestao, confiança_base = detectar_padroes(historico)
+    nome_padrao, sugestao, confianca_base = detectar_padroes(historico)
     
-    # Apenas sugere se a confiança for alta o suficiente (definido no return de detectar_padroes)
-    if sugestao and confiança_base >= 70: # Ajuste o limite de confiança conforme seus padrões
-        return nome_padrao, sugestao, confiança_base, False
+    # Apenas sugere se a confiança for alta o suficiente
+    # Você pode ajustar este limite (ex: 60, 70, 80) dependendo da robustez dos seus padrões.
+    if sugestao and confianca_base >= 70:
+        return nome_padrao, sugestao, confianca_base, False
     
     return "Aguardando Padrão Forte", None, 0, False # Não há sugestão com alta confiança
 
 def atualizar_contadores_horarios(player_dado1, player_dado2, banker_dado1, banker_dado2, winner):
-    """Atualiza contadores para detecção de horários críticos."""
+    """Atualiza contadores para detecção de horários críticos/bons."""
+    
     # Contar rodadas desde o último empate
     if winner == 'Empate':
         st.session_state.rodadas_desde_ultimo_empate = 0
-        st.session_state.empates_recentes += 1 # Incrementa para controle de empates próximos
+        st.session_state.empates_recentes += 1 
     else:
         st.session_state.rodadas_desde_ultimo_empate += 1
-        # Se não é empate, reseta o contador de empates recentes, a menos que haja uma lógica para "3 empates em 10 rodadas"
-        # que precise de um histórico mais longo
-        st.session_state.empates_recentes = 0 # Reinicia se a sequência de empates foi quebrada
+        # Diminui empates recentes se não houver um empate na rodada atual
+        st.session_state.empates_recentes = max(0, st.session_state.empates_recentes - 1)
 
     # Contar dado '1' consecutivo (em qualquer dado)
     if 1 in [player_dado1, player_dado2, banker_dado1, banker_dado2]:
@@ -129,19 +132,20 @@ st.title("🎲 Bac Bo Predictor - Guia de Padrões")
 st.markdown("---")
 
 # --- Painel de Entrada de Dados ---
-st.header("Adicionar Nova Rodada ao Histórico")
+st.header("➕ Adicionar Nova Rodada ao Histórico")
 
 col_input1, col_input2 = st.columns(2)
 
 with col_input1:
     st.subheader("🔵 Player")
-    player_dado1 = st.number_input("Dado 1 do Player", min_value=1, max_value=6, value=1, key="pd1")
-    player_dado2 = st.number_input("Dado 2 do Player", min_value=1, max_value=6, value=1, key="pd2")
+    # Usando min_value, max_value e value para melhor usabilidade
+    player_dado1 = st.number_input("Dado 1 do Player", min_value=1, max_value=6, value=1, key="pd1_input")
+    player_dado2 = st.number_input("Dado 2 do Player", min_value=1, max_value=6, value=1, key="pd2_input")
 
 with col_input2:
     st.subheader("🔴 Banker")
-    banker_dado1 = st.number_input("Dado 1 do Banker", min_value=1, max_value=6, value=1, key="bd1")
-    banker_dado2 = st.number_input("Dado 2 do Banker", min_value=1, max_value=6, value=1, key="bd2")
+    banker_dado1 = st.number_input("Dado 1 do Banker", min_value=1, max_value=6, value=1, key="bd1_input")
+    banker_dado2 = st.number_input("Dado 2 do Banker", min_value=1, max_value=6, value=1, key="bd2_input")
 
 add_round_button = st.button("➕ Adicionar Rodada e Analisar", use_container_width=True)
 
@@ -151,71 +155,76 @@ if add_round_button:
     winner = get_winner(player_sum, banker_sum)
 
     # Armazena os dados da rodada no histórico
-    # Certifique-se de que o nome da chave para o vencedor é 'Vencedor' (com V maiúsculo)
     st.session_state.historico.append({
         "Rodada": len(st.session_state.historico) + 1,
         "Player Dados": f"[{player_dado1},{player_dado2}]",
         "Player Soma": player_sum,
         "Banker Dados": f"[{banker_dado1},{banker_dado2}]",
         "Banker Soma": banker_sum,
-        "Vencedor": winner, # Esta é a chave correta!
+        "Vencedor": winner,
         "Timestamp": datetime.datetime.now().strftime("%H:%M:%S")
     })
     
     # Atualiza contadores de horários críticos
     atualizar_contadores_horarios(player_dado1, player_dado2, banker_dado1, banker_dado2, winner)
 
-    # Exibe uma mensagem de sucesso
-    st.success(f"Rodada {len(st.session_state.historico)} adicionada! Vencedor: {winner}")
-    # Força uma re-execução para atualizar a sugestão imediatamente
-    st.experimental_rerun()
+    st.success(f"Rodada {len(st.session_state.historico)} adicionada! Vencedor: **{winner}**")
+    st.experimental_rerun() # Re-executa para atualizar a sugestão e painéis imediatamente
 
 st.markdown("---")
 
-# --- Análise de Horários Críticos ---
-st.header("⏰ Análise de Horários Críticos")
+# --- Análise de Horários Críticos e Bons ---
+st.header("⏰ Análise de Momentos da Mesa")
+
+horario_ruim = False
+horario_bom = False
 
 # Lógica para "Horários Ruins"
-horario_ruim = False
-# Critério 1: 3 empates em menos de 10 rodadas (necessita de um controle mais sofisticado, este é um placeholder)
-if st.session_state.empates_recentes >= 3 and len(st.session_state.historico) <= 10 and len(st.session_state.historico) > 0:
-    st.warning("⚠️ **Cuidado:** Novo baralho com muitos empates iniciais. Sugerimos cautela.")
-    horario_ruim = True
-# Critério 2: Dado '1' em 5 rodadas seguidas
-if st.session_state.count_dado_1_consecutivo >= 5:
-    st.warning("⚠️ **Atenção:** Dado '1' apareceu em 5 rodadas seguidas. Potencial de manipulação ou momento ruim.")
-    horario_ruim = True
-# Critério 3: Mesa travando ou delay (depende de feedback manual do usuário ou detecção avançada)
-# Você pode adicionar um botão para o usuário reportar isso:
-# if st.button("Mesa com Lag/Problemas"):
-#    st.error("🚨 Problemas na mesa detectados. Sugestões desativadas.")
-#    horario_ruim = True
+if len(st.session_state.historico) > 0: # Só analisa se houver histórico
+    # Critério 1: Muitos empates no início (ex: 3 empates nas primeiras 10 rodadas)
+    # Para ser mais preciso, você pode verificar os últimos N empates nas últimas M rodadas.
+    # Por enquanto, este é um indicador simples:
+    if st.session_state.empates_recentes >= 3 and len(st.session_state.historico) < 15: # Ajuste o 15 conforme necessário
+        st.warning("⚠️ **Cuidado:** Mesa com muitos empates no início. Sugerimos cautela.")
+        horario_ruim = True
+    
+    # Critério 2: Dado '1' aparecendo consecutivamente em qualquer dado
+    if st.session_state.count_dado_1_consecutivo >= 5: # 5 ou mais vezes
+        st.warning(f"⚠️ **Atenção:** O dado '1' apareceu em **{st.session_state.count_dado_1_consecutivo}** rodadas seguidas. Potencial de manipulação ou momento ruim.")
+        horario_ruim = True
+
+    # Critério 3: Mesa travando ou delay (depende de feedback manual ou detecção mais avançada)
+    # Você pode adicionar um botão para o usuário reportar isso manualmente:
+    # if st.button("Mesa com Lag/Problemas", help="Clique se você notar atrasos ou travamentos no jogo."):
+    #    st.error("🚨 Problemas na mesa detectados. Sugestões podem ser imprecisas.")
+    #    horario_ruim = True
 
 if not horario_ruim and len(st.session_state.historico) > 0:
-    st.info("No momento, não há indicação de horários ruins baseados em padrões simples. Continue monitorando.")
+    st.info("No momento, não há indicação de horários ruins baseados em padrões simples.")
 
 # Lógica para "Horários Bons"
-horario_bom = False
-# Critério 1: Vitórias seguidas do mesmo lado com margens 1 ou 2 (requer lógica de margem)
-# Placeholder para este padrão
-# if st.session_state.sequencia_vitorias_margem_1_ou_2 >= 3:
-#    st.success("✅ Bom momento: Sequência de vitórias com margem 1 ou 2. Mantenha o foco!")
-#    horario_bom = True
-# Critério 2: Empates sumindo por mais de 15 rodadas
-if st.session_state.rodadas_desde_ultimo_empate > 15 and len(st.session_state.historico) > 0:
-    st.success("✅ **Excelente:** Ausência prolongada de empates. Oportunidade de padrões claros.")
-    horario_bom = True
-# Critério 3: Padrão Ouro se formando (detectado pela função analisar_sugestao)
+if len(st.session_state.historico) > 0: # Só analisa se houver histórico
+    # Critério 1: Empates sumindo por mais de 15 rodadas
+    if st.session_state.rodadas_desde_ultimo_empate > 15:
+        st.success(f"✅ **Excelente:** Ausência de empates por **{st.session_state.rodadas_desde_ultimo_empate}** rodadas. Oportunidade de padrões claros.")
+        horario_bom = True
+    
+    # Critério 2: Padrão Ouro se formando (seria detectado na função 'detectar_padroes' e retornado com alta confiança)
+    # Exemplo: se detectar_padroes retornasse um padrão com nome "🔒 Padrão Ouro" e confiança > 90
+    _, _, confianca_sugestao, _ = analisar_sugestao(st.session_state.historico)
+    if confianca_sugestao > 90: # Assumindo que padrões de alta confiança indicam "horário bom"
+        st.success("✨ **Momento Promissor:** Padrão de alta confiança detectado!")
+        horario_bom = True
 
-if not horario_bom and len(st.session_state.historico) > 0:
-    if not horario_ruim: # Não mostrar mensagem redundante se já for ruim
-        st.info("No momento, não há indicação de horários especialmente bons.")
-
+if not horario_bom and not horario_ruim and len(st.session_state.historico) > 0:
+    st.info("O momento atual da mesa é neutro. Continue acompanhando.")
+elif len(st.session_state.historico) == 0:
+    st.info("Adicione algumas rodadas para começar a análise dos momentos da mesa.")
 
 st.markdown("---")
 
 # --- Sugestão de Entrada Inteligente ---
-st.header("🎯 Sugestão de Entrada")
+st.header("🎯 Sugestão de Entrada Inteligente")
 
 # Analisa e obtém a sugestão
 nome_padrao_sugerido, entrada_sugerida, confianca, is_g1_active = analisar_sugestao(st.session_state.historico)
@@ -225,18 +234,28 @@ if horario_ruim:
     st.warning("🚫 **Sugestões Bloqueadas:** O aplicativo está em um horário crítico (ruim). Não é recomendado fazer entradas.")
 elif entrada_sugerida:
     st.session_state.last_suggested_entry = entrada_sugerida # Salva a última sugestão para o G1
-    with st.expander("Ver Sugestão Detalhada", expanded=True): # Começa expandido para visibilidade
+    with st.expander("Ver Sugestão Detalhada", expanded=True):
         st.subheader(f"🎉 Entrada Sugerida!")
+        
+        # Usa Markdown com HTML para colorir o texto da sugestão
+        if entrada_sugerida == 'Player':
+            st.markdown(f"**Entrada Sugerida:** {'<span style="color:blue; font-size: 20px; font-weight: bold;">🔵 PLAYER</span>'}", unsafe_allow_html=True)
+        elif entrada_sugerida == 'Banker':
+            st.markdown(f"**Entrada Sugerida:** {'<span style="color:red; font-size: 20px; font-weight: bold;">🔴 BANKER</span>'}", unsafe_allow_html=True)
+        else:
+            st.write(f"**Entrada Sugerida:** {entrada_sugerida}") # Para Empate, caso você adicione sugestões de empate
+
         st.write(f"**Padrão Detectado:** {nome_padrao_sugerido}")
-        st.markdown(f"**Entrada Sugerida:** {'<span style="color:blue; font-size: 20px;">🔵 PLAYER</span>' if entrada_sugerida == 'Player' else '<span style="color:red; font-size: 20px;">🔴 BANKER</span>'}", unsafe_allow_html=True)
         st.write(f"**Confiança:** **{confianca:.0f}%**")
         
         if is_g1_active:
             st.warning("🚨 **Status:** Modo G1 Ativo! Mantenha a entrada anterior.")
         else:
-            st.info("✅ **Status:** Normal")
+            st.info("✅ **Status:** Normal. Sugestão baseada em novo padrão.")
 
-        # Botões de Feedback
+        # Botões de Feedback da Sugestão
+        st.write("---")
+        st.write("Registre o resultado da sua aposta com base na sugestão:")
         col_feedback1, col_feedback2, col_feedback3 = st.columns(3)
         with col_feedback1:
             if st.button("✅ GREEN (Acertou)", use_container_width=True):
@@ -244,17 +263,17 @@ elif entrada_sugerida:
                 st.session_state.g1_active = False # Desativa G1 se acertou
                 st.session_state.last_suggested_entry = None # Reseta a sugestão G1
                 st.success("🎉 Parabéns! GREEN!")
-                st.experimental_rerun() # Re-executa para atualizar os contadores
+                st.experimental_rerun()
         with col_feedback2:
             if st.button("❌ RED (Errou)", use_container_width=True):
                 st.session_state.red_count += 1
                 st.session_state.g1_active = True # Ativa G1 se errou
                 st.error("😥 Que pena! RED. G1 ativado para a próxima entrada.")
-                st.experimental_rerun() # Re-executa para atualizar os contadores
+                st.experimental_rerun()
         with col_feedback3:
-            if st.button("🟡 EMPATE", use_container_width=True):
-                st.info("Rodada foi um empate. Contadores de GREEN/RED e G1 não alterados.")
-                st.experimental_rerun() # Re-executa para atualizar a interface
+            if st.button("🟡 EMPATE (Na Aposta)", use_container_width=True): # O empate na aposta não é RED nem GREEN
+                st.info("Rodada foi um empate. Contadores de GREEN/RED e G1 não alterados para esta aposta.")
+                st.experimental_rerun()
 else:
     st.info("Aguardando mais dados ou padrões de alta confiança para sugerir uma entrada. Continue adicionando rodadas!")
 
@@ -281,16 +300,15 @@ with col_stats3:
 # Histórico Detalhado
 st.subheader("📜 Histórico de Rodadas")
 if st.session_state.historico:
-    # Cria um DataFrame para exibir o histórico de forma mais organizada
-    # Garante que o histórico seja exibido em ordem reversa (mais recente primeiro)
+    # Cria um DataFrame e exibe o histórico em ordem reversa (mais recente primeiro)
     df_historico = pd.DataFrame(st.session_state.historico[::-1])
     st.dataframe(df_historico.set_index('Rodada'), use_container_width=True)
 else:
     st.info("Nenhuma rodada adicionada ainda. Use o painel acima para começar.")
 
-# Botão para limpar o histórico (útil para testes ou recomeçar)
+# Botão para limpar o histórico e resetar tudo
 st.markdown("---")
-if st.button("🔄 Limpar Histórico e Resetar Contadores"):
+if st.button("🔄 Limpar Histórico e Resetar Tudo", help="Isso apagará todas as rodadas e redefinirá os contadores."):
     st.session_state.historico = []
     st.session_state.green_count = 0
     st.session_state.red_count = 0
@@ -299,4 +317,4 @@ if st.button("🔄 Limpar Histórico e Resetar Contadores"):
     st.session_state.rodadas_desde_ultimo_empate = 0
     st.session_state.empates_recentes = 0
     st.session_state.count_dado_1_consecutivo = 0
-    st.experimental_rerun() # Re-executa para limpar a tela
+    st.experimental_rerun()
